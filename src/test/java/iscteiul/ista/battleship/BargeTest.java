@@ -6,7 +6,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-    class BargeTest {
+class BargeTest {
 
     private Barge barge;
     private IPosition initialPos;
@@ -22,6 +22,28 @@ import static org.junit.jupiter.api.Assertions.*;
         barge = null;
         initialPos = null;
     }
+
+    // --- NOVOS TESTES PARA COBERTURA DE CAMINHO/EXCEÇÃO (CONSTRUTOR) ---
+
+    @Test
+    @DisplayName("Constructor throws AssertionError for null bearing")
+    void constructorThrowsExceptionForNullBearing() {
+        // Cobre o caminho de falha na pré-condição (bearing == null)
+        assertThrows(AssertionError.class,
+                () -> new Barge(null, new Position(0, 0)),
+                "Erro: Construtor com bearing null deveria lançar AssertionError.");
+    }
+
+    @Test
+    @DisplayName("Constructor throws AssertionError for null position")
+    void constructorThrowsExceptionForNullPosition() {
+        // Cobre o caminho de falha na pré-condição (pos == null)
+        assertThrows(AssertionError.class,
+                () -> new Barge(Compass.NORTH, null),
+                "Erro: Construtor com posição inicial null deveria lançar AssertionError.");
+    }
+
+    // --- TESTES ORIGINAIS CONTINUAM AQUI ---
 
     @Test
     void buildShip() {
