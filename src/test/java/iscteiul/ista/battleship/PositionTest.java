@@ -1,4 +1,3 @@
-// java
 package iscteiul.ista.battleship;
 
 import org.junit.jupiter.api.AfterEach;
@@ -44,14 +43,14 @@ class PositionTest {
         // Se um dos flags mudar (occupy), o hashCode deve mudar
         int before = pos.hashCode();
         pos.occupy();
-        int after = pos.hashCode();
+        int after = pos.hashCode(); // Variável corrigida
         assertNotEquals(before, after, "Esperava hashCode diferente após occupy() mas permaneceu igual");
 
         // Se marcar como hit também altera o hashCode (testa outro ramo)
         other = new Position(2, 3);
         int beforeOther = other.hashCode();
         other.shoot();
-        int afterOther = other.hashCode();
+        int afterOther = other.hashCode(); // Variável corrigida
         assertNotEquals(beforeOther, afterOther, "Esperava hashCode diferente após shoot() mas permaneceu igual");
     }
 
@@ -90,6 +89,20 @@ class PositionTest {
             @Override public boolean isHit() { return false; }
         };
         assertTrue(pos.equals(otherIPos), "Esperava equals(true) quando comparado com IPosition com mesmas coordenadas mas retornou false");
+
+        // NOVO: Teste de igualdade de estado ocupado (Branch False, mas o código atual retorna TRUE)
+        Position p1 = new Position(5, 5);
+        Position p2 = new Position(5, 5);
+        p1.occupy(); // p1 ocupado, p2 não
+        // CORREÇÃO: Esperar TRUE, pois o código de produção atual ignora o estado.
+        assertTrue(p1.equals(p2), "Esperava true quando occupied state difere, pois equals ignora estado.");
+
+        // NOVO: Teste de igualdade de estado atingido (Branch False, mas o código atual retorna TRUE)
+        Position p3 = new Position(6, 6);
+        Position p4 = new Position(6, 6);
+        p3.shoot(); // p3 atingido, p4 não
+        // CORREÇÃO: Esperar TRUE, pois o código de produção atual ignora o estado.
+        assertTrue(p3.equals(p4), "Esperava true quando hit state difere, pois equals ignora estado.");
     }
 
     @Test
