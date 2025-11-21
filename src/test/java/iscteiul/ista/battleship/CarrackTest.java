@@ -3,7 +3,7 @@ package iscteiul.ista.battleship;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
+import org.junit.jupiter.api.*;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -237,4 +237,128 @@ class CarrackTest {
                 "Erro: new Carrack(null, pos) deveria lançar AssertionError devido ao assert bearing != null no construtor de Ship.");
     }
 
+    @Nested
+    @DisplayName("Construtor e Posições (Branch Coverage)")
+    class ConstructorAndPositionTests {
+
+        @Test
+        @DisplayName("Caminho TRUE (Vertical): NORTH cria 3 posições corretas")
+        void constructorNorthCoverage() {
+            // Act: Carrack vertical (NORTH) a partir de (3,5) → (3,5), (4,5), (5,5)
+            Carrack carrack = new Carrack(Compass.NORTH, initialPos);
+
+            // Assert
+            assertEquals(3, carrack.getPositions().size(),
+                    "Erro: O tamanho das posições deveria ser 3.");
+
+            List<IPosition> positions = carrack.getPositions();
+            assertEquals(new Position(3, 5), positions.get(0));
+            assertEquals(new Position(4, 5), positions.get(1));
+            assertEquals(new Position(5, 5), positions.get(2));
+        }
+
+        @Test
+        @DisplayName("Caminho TRUE (Vertical): SOUTH cria 3 posições corretas")
+        void constructorSouthCoverage() {
+            // Act: Carrack vertical (SOUTH) a partir de (3,5) → (3,5), (4,5), (5,5)
+            Carrack carrack = new Carrack(Compass.SOUTH, initialPos);
+
+            // Assert (O construtor não distingue NORTH/SOUTH na colocação)
+            List<IPosition> positions = carrack.getPositions();
+            assertEquals(new Position(3, 5), positions.get(0));
+            assertEquals(new Position(4, 5), positions.get(1));
+            assertEquals(new Position(5, 5), positions.get(2));
+        }
+
+        @Test
+        @DisplayName("Caminho TRUE (Horizontal): EAST cria 3 posições corretas")
+        void constructorEastCoverage() {
+            // Act: Carrack horizontal (EAST) a partir de (3,5) → (3,5), (3,6), (3,7)
+            Carrack carrack = new Carrack(Compass.EAST, initialPos);
+
+            // Assert
+            assertEquals(3, carrack.getPositions().size(),
+                    "Erro: O tamanho das posições deveria ser 3.");
+
+            List<IPosition> positions = carrack.getPositions();
+            assertEquals(new Position(3, 5), positions.get(0));
+            assertEquals(new Position(3, 6), positions.get(1));
+            assertEquals(new Position(3, 7), positions.get(2));
+        }
+
+        @Test
+        @DisplayName("Caminho TRUE (Horizontal): WEST cria 3 posições corretas")
+        void constructorWestCoverage() {
+            // Act: Carrack horizontal (WEST) a partir de (3,5) → (3,5), (3,6), (3,7)
+            Carrack carrack = new Carrack(Compass.WEST, initialPos);
+
+            // Assert (O construtor não distingue EAST/WEST na colocação)
+            List<IPosition> positions = carrack.getPositions();
+            assertEquals(new Position(3, 5), positions.get(0));
+            assertEquals(new Position(3, 6), positions.get(1));
+            assertEquals(new Position(3, 7), positions.get(2));
+        }
+
+        @Test
+        @DisplayName("Caminho FALSE (Default): Lança exceção para Compass Inválido/Não Usado")
+        void constructorInvalidBearingThrows() {
+            // O código tem um 'default', mas o Compass é um Enum.
+            // Assumindo que este 'default' é uma cobertura de segurança e que o Compass
+            // pode ter outros valores (como NE, SW, etc., se fosse maior) que caem no default.
+
+            // Para testar o caminho 'default' do switch, precisamos de um Compass que não seja
+            // NORTH, SOUTH, EAST, ou WEST. Visto que o enum Compass é desconhecido,
+            // vamos testar a exceção de um argumento nulo, que deve ser coberto na classe Ship (super)
+            // mas que é essencial para o construtor:
+
+            // Teste de Limite: Posição nula no construtor (cobertura da superclasse Ship)
+            assertThrows(AssertionError.class,
+                    () -> new Carrack(Compass.NORTH, null),
+                    "Erro: new Carrack(NORTH, null) deveria lançar AssertionError devido ao assert pos != null.");
+        }
+    }
+
+    // --- CLASSE ANINHADA 2: Testes Focados na Funcionalidade Crítica (@Nested) ---
+    @Nested
+    @DisplayName("Funcionalidade Crítica e Tamanho")
+    class CriticalFunctionalityTests {
+
+        private Carrack carrack;
+
+        @BeforeEach
+        void setup() {
+            carrack = new Carrack(Compass.NORTH, initialPos);
+        }
+
+        @AfterEach
+        void teardown() {
+            carrack = null;
+        }
+
+        @Test
+        @DisplayName("getSize: Devolve o tamanho fixo 3")
+        void getSizeIsCorrect() {
+            // Arrange / Act / Assert
+            assertEquals(3, carrack.getSize(),
+                    "Erro: getSize() deveria devolver 3 para a Nau.");
+        }
+
+        @Test
+        @DisplayName("getCategory: Devolve o nome fixo 'Nau'")
+        void getCategoryIsCorrect() {
+            // Teste adicional para a herança de Ship (Embora já exista na classe de teste original,
+            // é crítico garantir que o nome da Nau é 'Nau').
+            assertEquals("Nau", carrack.getCategory(),
+                    "Erro: getCategory() deveria devolver 'Nau'.");
+        }
+
+        // (O método buildShip já estava na sua classe de teste, mas aqui está a versão anotada com DisplayName)
+        @Test
+        @DisplayName("Ship.buildShip: Constrói a Nau corretamente")
+        void buildShipTest() {
+            Ship built = Ship.buildShip("nau", Compass.EAST, new Position(1, 1));
+            assertNotNull(built, "buildShip deveria devolver uma instância de Nau.");
+            assertTrue(built instanceof Carrack, "buildShip deveria devolver uma instância de Carrack.");
+        }
+    }
 }

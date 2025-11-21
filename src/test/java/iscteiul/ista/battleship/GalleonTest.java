@@ -1,11 +1,12 @@
 // java
 package iscteiul.ista.battleship;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -200,4 +201,161 @@ class GalleonTest {
         assertNotNull(thrown, "Esperado AssertionError não-nulo; Atual: " + thrown);
     }
 
+
+    @Nested
+    @DisplayName("Propriedades básicas e toString")
+    class StateTests {
+        @Test
+        @DisplayName("getSize devolve 5 e getCategory devolve 'Galeao'")
+        void testGetSizeAndCategory() {
+            Galleon g = new Galleon(Compass.NORTH, new Position(0, 0));
+            assertEquals(Integer.valueOf(5), g.getSize(), "Esperado tamanho=5 para Galleon");
+            assertEquals("Galeao", g.getCategory(), "Esperado categoria 'Galeao'");
+        }
+
+        @Test
+        @DisplayName("toString contém a categoria do navio")
+        void testToStringContainsCategory() {
+            Galleon g = new Galleon(Compass.EAST, new Position(1, 1));
+            String s = g.toString();
+            assertNotNull(s);
+            assertTrue(s.contains(g.getCategory()), "toString deve conter a categoria");
+        }
+    }
+
+    @Nested
+    @DisplayName("Preenchimento por orientação (cobertura do switch)")
+    class OrientationFillTests {
+
+        @Test
+        @DisplayName("fillNorth produz posições esperadas")
+        void testFillNorthPositions() {
+            int r = 2, c = 3;
+            Galleon g = new Galleon(Compass.NORTH, new Position(r, c));
+            List<IPosition> pos = g.getPositions();
+            assertEquals(5, pos.size());
+            assertEquals(r, pos.get(0).getRow());
+            assertEquals(c, pos.get(0).getColumn());
+            assertEquals(r, pos.get(1).getRow());
+            assertEquals(c + 1, pos.get(1).getColumn());
+            assertEquals(r, pos.get(2).getRow());
+            assertEquals(c + 2, pos.get(2).getColumn());
+            assertEquals(r + 1, pos.get(3).getRow());
+            assertEquals(c + 1, pos.get(3).getColumn());
+            assertEquals(r + 2, pos.get(4).getRow());
+            assertEquals(c + 1, pos.get(4).getColumn());
+        }
+
+        @Test
+        @DisplayName("fillSouth produz posições esperadas")
+        void testFillSouthPositions() {
+            int r = 3, c = 4;
+            Galleon g = new Galleon(Compass.SOUTH, new Position(r, c));
+            List<IPosition> pos = g.getPositions();
+            assertEquals(5, pos.size());
+            assertEquals(r, pos.get(0).getRow());
+            assertEquals(c, pos.get(0).getColumn());
+            assertEquals(r + 1, pos.get(1).getRow());
+            assertEquals(c, pos.get(1).getColumn());
+            assertEquals(r + 2, pos.get(2).getRow());
+            assertEquals(c - 1, pos.get(2).getColumn());
+            assertEquals(r + 2, pos.get(3).getRow());
+            assertEquals(c, pos.get(3).getColumn());
+            assertEquals(r + 2, pos.get(4).getRow());
+            assertEquals(c + 1, pos.get(4).getColumn());
+        }
+
+        @Test
+        @DisplayName("fillEast produz posições esperadas")
+        void testFillEastPositions() {
+            int r = 5, c = 5;
+            Galleon g = new Galleon(Compass.EAST, new Position(r, c));
+            List<IPosition> pos = g.getPositions();
+            assertEquals(5, pos.size());
+            assertEquals(r, pos.get(0).getRow());
+            assertEquals(c, pos.get(0).getColumn());
+            assertEquals(r + 1, pos.get(1).getRow());
+            assertEquals(c - 2, pos.get(1).getColumn());
+            assertEquals(r + 1, pos.get(2).getRow());
+            assertEquals(c - 1, pos.get(2).getColumn());
+            assertEquals(r + 1, pos.get(3).getRow());
+            assertEquals(c, pos.get(3).getColumn());
+            assertEquals(r + 2, pos.get(4).getRow());
+            assertEquals(c, pos.get(4).getColumn());
+        }
+
+        @Test
+        @DisplayName("fillWest produz posições esperadas")
+        void testFillWestPositions() {
+            int r = 7, c = 2;
+            Galleon g = new Galleon(Compass.WEST, new Position(r, c));
+            List<IPosition> pos = g.getPositions();
+            assertEquals(5, pos.size());
+            assertEquals(r, pos.get(0).getRow());
+            assertEquals(c, pos.get(0).getColumn());
+            assertEquals(r + 1, pos.get(1).getRow());
+            assertEquals(c, pos.get(1).getColumn());
+            assertEquals(r + 1, pos.get(2).getRow());
+            assertEquals(c + 1, pos.get(2).getColumn());
+            assertEquals(r + 1, pos.get(3).getRow());
+            assertEquals(c + 2, pos.get(3).getColumn());
+            assertEquals(r + 2, pos.get(4).getRow());
+            assertEquals(c, pos.get(4).getColumn());
+        }
+    }
+
+    @Nested
+    @DisplayName("Comportamento público e exceções")
+    class BehaviorTests {
+
+        @Test
+        @DisplayName("occupies devolve true para posição interna e false para externa")
+        void testOccupiesBoundaryAndOutside() {
+            Galleon g = new Galleon(Compass.NORTH, new Position(2, 3));
+            IPosition inside = g.getPositions().get(0);
+            IPosition outside = new Position(999, 999);
+            assertTrue(g.occupies(inside));
+            assertFalse(g.occupies(outside));
+        }
+
+        @Test
+        @DisplayName("construtor com bearing null lança NullPointerException ou AssertionError")
+        void testConstructorWithNullBearingThrowsNPEorAssertionError() {
+            Throwable thrown = assertThrows(Throwable.class,
+                    () -> new Galleon(null, new Position(0, 0)),
+                    "Esperado NullPointerException ou AssertionError ao criar Galleon com bearing null");
+            assertTrue(thrown instanceof NullPointerException || thrown instanceof AssertionError,
+                    "Exceção esperada: NullPointerException ou AssertionError; atual: " + thrown.getClass().getName());
+        }
+    }
+    @Test
+    @DisplayName("construtor com bearing null lança NullPointerException quando assertions desativadas")
+    void testConstructorWithNullBearingThrowsNPEWhenAssertionsDisabled() throws Exception {
+        String classpath = System.getProperty("java.class.path");
+        String runner = "iscteiul.ista.battleship.GalleonTest$NullGalleonRunner";
+
+        ProcessBuilder pb = new ProcessBuilder(
+                "java", "-cp", classpath, "-da", runner
+        );
+        Process p = pb.start();
+        try (BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream()))) {
+            String out = r.lines().collect(Collectors.joining("\n")).trim();
+            int exit = p.waitFor();
+            assertEquals(0, exit, "Processo auxiliar terminou com código diferente de 0");
+            assertEquals("java.lang.NullPointerException", out,
+                    "Esperado java.lang.NullPointerException do processo auxiliar; actual: " + out);
+        }
+    }
+
+    // Runner auxiliar (compilado junto com os testes) — invocado em novo JVM com -da
+    public static class NullGalleonRunner {
+        public static void main(String[] args) {
+            try {
+                new Galleon(null, new Position(0, 0));
+                System.out.println("NO_EXCEPTION");
+            } catch (Throwable t) {
+                System.out.println(t.getClass().getName());
+            }
+        }
+    }
 }
