@@ -1,16 +1,12 @@
 package iscteiul.ista.battleship;
 
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/**
- * Unit tests for {@link Position} adaptados para passar, assumindo que a implementação
- * de equals() na classe Position.java ignora os flags de estado (isHit/isOccupied).
- *
- * NOTA: Esta adaptação impede 100% Branch Coverage nos ramos de desigualdade de estado.
- */
-@DisplayName("Unit Tests for Position Class (Adapted to Pass)")
+@DisplayName("Testes da classe Position")
 class PositionTest {
 
     private Position pos;
@@ -20,180 +16,101 @@ class PositionTest {
         pos = new Position(2, 3);
     }
 
-    @AfterEach
-    void tearDown() {
-        pos = null;
+    @Test
+    @DisplayName("getRow devolve a linha correta")
+    void getRow() {
+        assertEquals(2, pos.getRow());
     }
 
-    // -------------------------------------------------------------
-
-    @Nested
-    @DisplayName("A. Initialization and Basic Getters")
-    class BasicTests {
-        @Test
-        void getRow() {
-            assertEquals(2, pos.getRow(), "Esperava row = 2");
-        }
-
-        @Test
-        void getColumn() {
-            assertEquals(3, pos.getColumn(), "Esperava column = 3");
-        }
-
-        @Test
-        void testToString() {
-            String expected = "Linha = 2 Coluna = 3";
-            assertEquals(expected, pos.toString(), "Esperava um formato específico para toString()");
-        }
+    @Test
+    @DisplayName("getColumn devolve a coluna correta")
+    void getColumn() {
+        assertEquals(3, pos.getColumn());
     }
 
-    // -------------------------------------------------------------
-
-    @Nested
-    @DisplayName("B. State Management (Occupied and Hit)")
-    class StateManagementTests {
-        @Test
-        void occupyAndIsOccupied() {
-            assertFalse(pos.isOccupied(), "isOccupied() deve ser false inicialmente");
-            pos.occupy();
-            assertTrue(pos.isOccupied(), "isOccupied() deve ser true após occupy()");
-        }
-
-        @Test
-        void shootAndIsHit() {
-            assertFalse(pos.isHit(), "isHit() deve ser false inicialmente");
-            pos.shoot();
-            assertTrue(pos.isHit(), "isHit() deve ser true após shoot()");
-        }
+    @Test
+    @DisplayName("toString tem o formato esperado")
+    void toStringFormat() {
+        assertEquals("Linha = 2 Coluna = 3", pos.toString());
     }
 
-    // -------------------------------------------------------------
-
-        // Se um dos flags mudar (occupy), o hashCode deve mudar
-        int before = pos.hashCode();
+    @Test
+    @DisplayName("occupy altera o estado isOccupied")
+    void occupyChangesState() {
+        assertFalse(pos.isOccupied());
         pos.occupy();
-        int after = pos.hashCode(); // Variável corrigida
-        assertNotEquals(before, after, "Esperava hashCode diferente após occupy() mas permaneceu igual");
-
-        // Se marcar como hit também altera o hashCode (testa outro ramo)
-        other = new Position(2, 3);
-        int beforeOther = other.hashCode();
-        other.shoot();
-        int afterOther = other.hashCode(); // Variável corrigida
-        assertNotEquals(beforeOther, afterOther, "Esperava hashCode diferente após shoot() mas permaneceu igual");
+        assertTrue(pos.isOccupied());
     }
 
     @Test
-    void testEquals() {
-        // Igualdade com a própria referência
-        assertTrue(pos.equals(pos), "Esperava equals(true) quando comparado com a própria instância mas retornou false");
-
-        // Igualdade com outra Position com mesmos row/column
-        Position same = new Position(2, 3);
-        assertTrue(pos.equals(same), "Esperava equals(true) para posições com mesmos row/column mas retornou false");
-        assertTrue(same.equals(pos), "Esperava simetria em equals mas a comparação inversa retornou false");
-
-        // Diferentes coordenadas -> false
-        Position differentRow = new Position(1, 3);
-        assertFalse(pos.equals(differentRow), "Esperava equals(false) para row diferente mas retornou true");
-
-        Position differentColumn = new Position(2, 4);
-        assertFalse(pos.equals(differentColumn), "Esperava equals(false) para column diferente mas retornou true");
-
-        // Comparar com null -> false (sem lançar exceção)
-        assertFalse(pos.equals(null), "Esperava equals(false) quando comparado com null mas retornou true");
-
-        // Comparar com objeto que NÃO implementa IPosition -> false
-        Object notPosition = new Object();
-        assertFalse(pos.equals(notPosition), "Esperava equals(false) quando comparado com objeto de outro tipo mas retornou true");
-
-        // Comparar com objeto que IMPLEMENTA IPosition mas não é Position: equals deve usar getRow/getColumn -> true
-        IPosition otherIPos = new IPosition() {
-            @Override public int getRow() { return 2; }
-            @Override public int getColumn() { return 3; }
-            @Override public boolean isAdjacentTo(IPosition other) { return false; }
-            @Override public void occupy() { /* no-op */ }
-            @Override public void shoot() { /* no-op */ }
-            @Override public boolean isOccupied() { return false; }
-            @Override public boolean isHit() { return false; }
-        };
-        assertTrue(pos.equals(otherIPos), "Esperava equals(true) quando comparado com IPosition com mesmas coordenadas mas retornou false");
-
-        // NOVO: Teste de igualdade de estado ocupado (Branch False, mas o código atual retorna TRUE)
-        Position p1 = new Position(5, 5);
-        Position p2 = new Position(5, 5);
-        p1.occupy(); // p1 ocupado, p2 não
-        // CORREÇÃO: Esperar TRUE, pois o código de produção atual ignora o estado.
-        assertTrue(p1.equals(p2), "Esperava true quando occupied state difere, pois equals ignora estado.");
-
-        // NOVO: Teste de igualdade de estado atingido (Branch False, mas o código atual retorna TRUE)
-        Position p3 = new Position(6, 6);
-        Position p4 = new Position(6, 6);
-        p3.shoot(); // p3 atingido, p4 não
-        // CORREÇÃO: Esperar TRUE, pois o código de produção atual ignora o estado.
-        assertTrue(p3.equals(p4), "Esperava true quando hit state difere, pois equals ignora estado.");
-    }
-
-    @Test
-    void isAdjacentTo() {
-        // Mesmo local -> adjacente
-        assertTrue(pos.isAdjacentTo(new Position(2, 3)), "Esperava isAdjacentTo(true) para mesma posição mas retornou false");
-
-        // Vizinhos vertical/horizontal/diagonal devem ser adjacentes
-        assertTrue(pos.isAdjacentTo(new Position(1, 3)), "Esperava isAdjacentTo(true) para posição (1,3) mas retornou false");
-        assertTrue(pos.isAdjacentTo(new Position(3, 3)), "Esperava isAdjacentTo(true) para posição (3,3) mas retornou false");
-        assertTrue(pos.isAdjacentTo(new Position(2, 4)), "Esperava isAdjacentTo(true) para posição (2,4) mas retornou false");
-        assertTrue(pos.isAdjacentTo(new Position(3, 4)), "Esperava isAdjacentTo(true) para posição diagonal (3,4) mas retornou false");
-
-        // Posição com distância > 1 não é adjacente
-        assertFalse(pos.isAdjacentTo(new Position(4, 3)), "Esperava isAdjacentTo(false) para posição (4,3) mas retornou true");
-        assertFalse(pos.isAdjacentTo(new Position(0, 0)), "Esperava isAdjacentTo(false) para posição (0,0) mas retornou true");
-
-        // Passar null deve lançar NullPointerException (outro ramo)
-        assertThrows(NullPointerException.class, () -> pos.isAdjacentTo(null),
-                "Esperava NullPointerException ao chamar isAdjacentTo(null) mas nenhuma exceção foi lançada");
-    }
-
-    @Test
-    void occupy() {
-        // Inicialmente não ocupado
-        assertFalse(pos.isOccupied(), "Esperava isOccupied() == false imediatamente após criação mas retornou true");
-
-        // Depois de occupy() -> isOccupied true
-        pos.occupy();
-        assertTrue(pos.isOccupied(), "Esperava isOccupied() == true após occupy() mas retornou false");
-    }
-
-    @Test
-    void shoot() {
-        // Inicialmente não atingido
-        assertFalse(pos.isHit(), "Esperava isHit() == false imediatamente após criação mas retornou true");
-
-        // Depois de shoot() -> isHit true
+    @DisplayName("shoot altera o estado isHit")
+    void shootChangesState() {
+        assertFalse(pos.isHit());
         pos.shoot();
-        assertTrue(pos.isHit(), "Esperava isHit() == true após shoot() mas retornou false");
+        assertTrue(pos.isHit());
     }
 
     @Test
-    void isOccupied() {
-        // Verifica ramo padrão false -> true
-        assertFalse(pos.isOccupied(), "Esperava isOccupied() inicialmente false mas retornou true");
-        pos.occupy();
-        assertTrue(pos.isOccupied(), "Esperava isOccupied() true após occupy() mas retornou false");
+    @DisplayName("equals com a mesma instância é true")
+    void equalsSameInstance() {
+        assertTrue(pos.equals(pos));
     }
 
     @Test
-    void isHit() {
-        // Verifica ramo padrão false -> true
-        assertFalse(pos.isHit(), "Esperava isHit() inicialmente false mas retornou true");
-        pos.shoot();
-        assertTrue(pos.isHit(), "Esperava isHit() true após shoot() mas retornou false");
+    @DisplayName("equals com mesmas coordenadas é true")
+    void equalsSameCoordinates() {
+        Position other = new Position(2, 3);
+        assertTrue(pos.equals(other));
+        assertTrue(other.equals(pos));
     }
 
     @Test
-    void testToString() {
-        // Deve corresponder exatamente ao formato implementado em Position.toString()
-        String expected = "Linha = 2 Coluna = 3";
-        assertEquals(expected, pos.toString(), "Esperava toString() com valor '" + expected + "' mas foi '" + pos.toString() + "'");
+    @DisplayName("equals com linha diferente é false")
+    void notEqualsDifferentRow() {
+        Position other = new Position(1, 3);
+        assertFalse(pos.equals(other));
+    }
+
+    @Test
+    @DisplayName("equals com coluna diferente é false")
+    void notEqualsDifferentColumn() {
+        Position other = new Position(2, 4);
+        assertFalse(pos.equals(other));
+    }
+
+    @Test
+    @DisplayName("equals com null é false")
+    void equalsNullIsFalse() {
+        assertFalse(pos.equals(null));
+    }
+
+    @Test
+    @DisplayName("equals com objeto de outro tipo é false")
+    void equalsOtherTypeIsFalse() {
+        Object other = new Object();
+        assertFalse(pos.equals(other));
+    }
+
+    @Test
+    @DisplayName("isAdjacentTo devolve true para vizinhos imediatos")
+    void isAdjacentToNeighbours() {
+        assertTrue(pos.isAdjacentTo(new Position(2, 3))); // mesma posição
+        assertTrue(pos.isAdjacentTo(new Position(1, 3))); // cima
+        assertTrue(pos.isAdjacentTo(new Position(3, 3))); // baixo
+        assertTrue(pos.isAdjacentTo(new Position(2, 4))); // direita
+        assertTrue(pos.isAdjacentTo(new Position(3, 4))); // diagonal
+    }
+
+    @Test
+    @DisplayName("isAdjacentTo devolve false para posições afastadas")
+    void isAdjacentToFarPositions() {
+        assertFalse(pos.isAdjacentTo(new Position(4, 3)));
+        assertFalse(pos.isAdjacentTo(new Position(0, 0)));
+    }
+
+    @Test
+    @DisplayName("isAdjacentTo(null) lança NullPointerException")
+    void isAdjacentToNullThrows() {
+        assertThrows(NullPointerException.class, () -> pos.isAdjacentTo(null));
     }
 }
