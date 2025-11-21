@@ -1,9 +1,7 @@
 // language: java
 package iscteiul.ista.battleship;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 
 import java.util.List;
 
@@ -301,5 +299,157 @@ class ShipTest {
     void constructor_nullPositionThrows() {
         assertThrows(AssertionError.class, () -> new TestShip("t", Compass.NORTH, null),
                 "Error: expected AssertionError when position is null");
+    }
+
+    @Nested
+    @DisplayName("Fábrica buildShip - todos os ramos do switch")
+    class BuildTests {
+        @Test
+        @DisplayName("buildShip devolve instâncias para kinds conhecidos e null para unknown")
+        void testBuildShipAllKindsAndUnknown() {
+            String[] kinds = {"barca", "caravela", "nau", "fragata", "galeao"};
+            for (String k : kinds) {
+                assertNotNull(Ship.buildShip(k, Compass.NORTH, new Position(0, 0)),
+                        "Esperado instância não-nula para kind=" + k);
+            }
+            assertNull(Ship.buildShip("inexistente", Compass.NORTH, new Position(0, 0)),
+                    "Esperado null para kind desconhecido");
+        }
+    }
+
+    // ---------- Estado e representação ----------
+    @Nested
+    @DisplayName("Getters e toString")
+    class StateTests {
+        @Test
+        @DisplayName("getCategory/getBearing/getPosition/getPositions e toString contêm os componentes")
+        void testGettersAndToString() {
+            TestShip s = new TestShip("minha", Compass.EAST, new Position(4, 4));
+            s.getPositions().add(new Position(4, 4));
+            List<IPosition> pos = s.getPositions();
+            assertAll(
+                    () -> assertEquals("minha", s.getCategory()),
+                    () -> assertEquals(Compass.EAST, s.getBearing()),
+                    () -> assertEquals(new Position(4, 4), s.getPosition()),
+                    () -> assertEquals(1, pos.size()),
+                    () -> {
+                        String t = s.toString();
+                        assertTrue(t.contains("minha"));
+                        assertTrue(t.contains(Compass.EAST.toString()));
+                        assertTrue(t.contains(s.getPosition().toString()));
+                    }
+            );
+        }
+    }
+
+    // ---------- Extremos (top/bottom/left/right) com ramos update e single ----------
+    @Nested
+    @DisplayName("Cálculo de extremos - caminhos single e update")
+    class ExtremesTests {
+        @Test
+        @DisplayName("getTopMost/getBottomMost/getLeftMost/getRightMost: single e atualização de valor")
+        void testExtremesSingleAndUpdate() {
+            TestShip s = new TestShip("ext", Compass.NORTH, new Position(0, 0));
+            s.getPositions().clear();
+            s.getPositions().add(new Position(5, 5)); // single -> extremes = 5,5
+            assertAll(
+                    () -> assertEquals(5, s.getTopMostPos()),
+                    () -> assertEquals(5, s.getBottomMostPos()),
+                    () -> assertEquals(5, s.getLeftMostPos()),
+                    () -> assertEquals(5, s.getRightMostPos())
+            );
+            // adiciona posições que forçam updates (menor/maior)
+            s.getPositions().add(new Position(2, 8)); // top menor, right maior, left unchanged
+            s.getPositions().add(new Position(9, 3)); // bottom maior, left menor
+            assertAll(
+                    () -> assertEquals(2, s.getTopMostPos()),
+                    () -> assertEquals(9, s.getBottomMostPos()),
+                    () -> assertEquals(3, s.getLeftMostPos()),
+                    () -> assertEquals(8, s.getRightMostPos())
+            );
+        }
+    }
+
+    // ---------- Ocupação e tiro (occupies, shoot) incluindo asserts de null ----------
+    @Nested
+    @DisplayName("occupies e shoot - caminhos true/false e assertions")
+    class InteractionTests {
+        @Test
+        @DisplayName("occupies verdadeiro/falso, occupies(null) lança, shoot marca e shoot(null) lança")
+        void testOccupiesAndShoot() {
+            TestShip s = new TestShip("int", Compass.NORTH, new Position(2, 3));
+            s.getPositions().clear();
+            s.getPositions().add(new Position(2, 3));
+            s.getPositions().add(new Position(2, 4));
+            // occupies true/false
+            assertTrue(s.occupies(new Position(2, 3)));
+            assertFalse(s.occupies(new Position(0, 0)));
+            // occupies(null) lança AssertionError
+            assertThrows(AssertionError.class, () -> s.occupies(null));
+            // shoot acerta e marca hit
+            s.shoot(new Position(2, 3));
+            assertTrue(s.getPositions().get(0).isHit());
+            // shoot que erra não marca os outros
+            s.getPositions().get(1).shoot(); // garante estado conhecido
+            s.shoot(new Position(9, 9));
+            assertTrue(s.getPositions().get(1).isHit(), "posição 2 deveria manter seu estado marcado explicitamente");
+            // shoot(null) lança AssertionError
+            assertThrows(AssertionError.class, () -> s.shoot(null));
+        }
+    }
+
+    // ---------- Proximidade (tooCloseTo) para posição e navio ----------
+    @Nested
+    @DisplayName("tooCloseTo - posição e navio (null / true / false)")
+    class ProximityTests {
+        @Test
+        @DisplayName("tooCloseTo(IPosition) verdadeiro/falso e tooCloseTo(IShip) null/true/false")
+        void testTooCloseToPositionAndShip() {
+            TestShip s = new TestShip("prox", Compass.NORTH, new Position(2, 2));
+            s.getPositions().clear();
+            s.getPositions().add(new Position(2, 2));
+            s.getPositions().add(new Position(2, 3));
+            // posição adjacente -> true
+            assertTrue(s.tooCloseTo(new Position(2, 4)));
+            // posição distante -> false
+            assertFalse(s.tooCloseTo(new Position(0, 0)));
+            // tooCloseTo(IShip) null lança
+            assertThrows(AssertionError.class, () -> s.tooCloseTo((IShip) null));
+            // outra ship adjacente -> true
+            TestShip other = new TestShip("o", Compass.EAST, new Position(2, 4));
+            other.getPositions().add(new Position(2, 4));
+            assertTrue(s.tooCloseTo(other));
+            // outra ship distante -> false
+            TestShip far = new TestShip("f", Compass.SOUTH, new Position(10, 10));
+            far.getPositions().add(new Position(10, 10));
+            assertFalse(s.tooCloseTo(far));
+        }
+    }
+
+    // ---------- stillFloating e construtor assertions ----------
+    @Nested
+    @DisplayName("stillFloating e construtor - condições de fronteira e assertions")
+    class FloatingAndConstructorTests {
+        @Test
+        @DisplayName("stillFloating: todos atingidos / algum não atingido / lista vazia e construtor com null lança")
+        void testStillFloatingAndConstructorAssertions() {
+            // todos atingidos -> false
+            TestShip sAll = new TestShip("f", Compass.NORTH, new Position(1, 1));
+            sAll.getPositions().add(new Position(1, 1));
+            sAll.getPositions().get(0).shoot();
+            assertFalse(sAll.stillFloating());
+            // algum não atingido -> true
+            TestShip sSome = new TestShip("g", Compass.NORTH, new Position(2, 2));
+            sSome.getPositions().add(new Position(2, 2));
+            sSome.getPositions().add(new Position(2, 3));
+            sSome.getPositions().get(0).shoot();
+            assertTrue(sSome.stillFloating());
+            // lista vazia -> loop não entra -> false
+            TestShip empty = new TestShip("e", Compass.SOUTH, new Position(0, 0));
+            assertFalse(empty.stillFloating());
+            // construtor com bearing null e pos null lança AssertionError quando assertions ativas
+            assertThrows(AssertionError.class, () -> new TestShip("x", null, new Position(0, 0)));
+            assertThrows(AssertionError.class, () -> new TestShip("x", Compass.NORTH, null));
+        }
     }
 }

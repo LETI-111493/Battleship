@@ -4,7 +4,7 @@ package iscteiul.ista.battleship;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
+import org.junit.jupiter.api.*;
 import java.lang.reflect.InaccessibleObjectException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -145,5 +145,103 @@ class CompassTest {
         // Confirma novamente que toString() devolve exatamente o caracter esperado como string
         // Esperava toString() == "n" mas foi diferente
         assertEquals("n", Compass.NORTH.toString(), "Esperava Compass.NORTH.toString() == 'n' mas foi diferente");
+    }
+
+    @Nested
+    @DisplayName("Estado e Atributos do Enum")
+    class EnumStateTests {
+
+        @Test
+        @DisplayName("NORTH: Verifica char 'n' e toString")
+        void verifyNorthState() {
+            Compass c = Compass.NORTH;
+            // Verifica o caracter interno
+            assertEquals('n', c.getDirection(),
+                    "NORTH deveria estar associado ao char 'n'.");
+            // Verifica o toString
+            assertEquals("n", c.toString(),
+                    "NORTH.toString() deveria retornar \"n\".");
+        }
+
+        @Test
+        @DisplayName("WEST: Verifica char 'o' (Oeste) e toString")
+        void verifyWestState() {
+            Compass c = Compass.WEST;
+            // Caso especial: WEST é 'o' (de Oeste) e não 'w'
+            assertEquals('o', c.getDirection(),
+                    "WEST deveria estar associado ao char 'o'.");
+            assertEquals("o", c.toString(),
+                    "WEST.toString() deveria retornar \"o\".");
+        }
+
+        @Test
+        @DisplayName("Outras Direções: Verifica SOUTH, EAST e UNKNOWN")
+        void verifyRemainingStates() {
+            assertAll("Verificar restantes constantes",
+                    () -> assertEquals('s', Compass.SOUTH.getDirection()),
+                    () -> assertEquals('e', Compass.EAST.getDirection()),
+                    () -> assertEquals('u', Compass.UNKNOWN.getDirection())
+            );
+        }
+    }
+
+    @Nested
+    @DisplayName("Lógica Estática: charToCompass")
+    class StaticConversionTests {
+
+        @Test
+        @DisplayName("Conversão Válida: Mapeia n, s, e, o corretamente")
+        void charToCompassValidBranches() {
+            // Branch: case 'n'
+            assertEquals(Compass.NORTH, Compass.charToCompass('n'),
+                    "Char 'n' deve converter para NORTH");
+
+            // Branch: case 's'
+            assertEquals(Compass.SOUTH, Compass.charToCompass('s'),
+                    "Char 's' deve converter para SOUTH");
+
+            // Branch: case 'e'
+            assertEquals(Compass.EAST, Compass.charToCompass('e'),
+                    "Char 'e' deve converter para EAST");
+
+            // Branch: case 'o'
+            assertEquals(Compass.WEST, Compass.charToCompass('o'),
+                    "Char 'o' deve converter para WEST");
+        }
+
+        @Test
+        @DisplayName("Conversão Limite: 'u' mapeia explicitamente para UNKNOWN")
+        void charToCompassUnknownBranch() {
+            // Nota: Embora 'u' caia no default logicamente se não tiver case,
+            // testamos se o enum UNKNOWN funciona como esperado.
+            // No código atual, 'u' cai no 'default', retornando UNKNOWN.
+            assertEquals(Compass.UNKNOWN, Compass.charToCompass('u'),
+                    "Char 'u' deve converter para UNKNOWN");
+        }
+
+        @Test
+        @DisplayName("Branch Default: Caracteres inválidos retornam UNKNOWN")
+        void charToCompassDefaultBranch() {
+            // Testa caracteres que não existem no switch
+            assertEquals(Compass.UNKNOWN, Compass.charToCompass('x'),
+                    "Char inválido 'x' deve retornar UNKNOWN");
+
+            assertEquals(Compass.UNKNOWN, Compass.charToCompass('1'),
+                    "Números devem retornar UNKNOWN");
+
+            assertEquals(Compass.UNKNOWN, Compass.charToCompass(' '),
+                    "Espaço deve retornar UNKNOWN");
+        }
+
+        @Test
+        @DisplayName("Case Sensitivity: Maiúsculas caem no default (UNKNOWN)")
+        void charToCompassCaseSensitivity() {
+            // O switch usa 'n' minúsculo. 'N' maiúsculo cairá no default.
+            assertEquals(Compass.UNKNOWN, Compass.charToCompass('N'),
+                    "Maiúscula 'N' não é tratada no switch, deve retornar UNKNOWN");
+
+            assertEquals(Compass.UNKNOWN, Compass.charToCompass('O'),
+                    "Maiúscula 'O' não é tratada no switch, deve retornar UNKNOWN");
+        }
     }
 }

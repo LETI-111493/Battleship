@@ -1,8 +1,6 @@
 package iscteiul.ista.battleship;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
@@ -360,4 +358,171 @@ class FleetTest {
         assertTrue(out.contains("A"),
                 "Error: expected printed output to contain ship category 'A' but output: \"" + out + "\"");
     }
+
+    @Nested
+    @DisplayName("Estado inicial")
+    class InitialStateTests {
+
+        @Test
+        @DisplayName("getShips deve começar vazio (estado inicial)")
+        void test_getShips_initiallyEmpty() {
+            assertNotNull(fleet.getShips(), "Lista de navios não deve ser nula no início");
+            assertEquals(0, fleet.getShips().size(), "Fleet inicialmente deve ter 0 navios");
+        }
+    }
+
+    @Nested
+    @DisplayName("Funcionalidade e ramos críticos")
+    class BehaviorTests {
+
+        @Test
+        @DisplayName("printShips(nome nulo) Lança NullPointerException (ramo de erro)")
+        void test_printShips_withNull_throwsNPE() {
+            assertThrows(NullPointerException.class, () -> Fleet.printShips(null));
+        }
+
+        @Test
+        @DisplayName("printShips com lista vazia não escreve nada (condição limite)")
+        void test_printShips_emptyList_printsNothing() {
+            Fleet.printShips(new ArrayList<>());
+            assertEquals(0, outContent.toByteArray().length, "Esperava-se output vazio ao imprimir lista vazia");
+        }
+
+        @Test
+        @DisplayName("addShip válido adiciona e retorna true (todos os checks true)")
+        void test_addShip_allConditionsSatisfied_adds() {
+            DummyShip s = new DummyShip("OK", Compass.NORTH, new Position(2, 2));
+            boolean res = fleet.addShip(s);
+            assertTrue(res, "addShip deveria retornar true para navio válido dentro do tabuleiro");
+            assertTrue(fleet.getShips().contains(s), "Fleet deveria conter o navio após addShip bem-sucedido");
+        }
+
+        @Test
+        @DisplayName("addShip null lança NullPointerException (entrada inválida)")
+        void test_addShip_null_throwsNPE() {
+            assertThrows(NullPointerException.class, () -> fleet.addShip(null));
+        }
+
+        @Test
+        @DisplayName("addShip respeita limite de tamanho (ramo false quando excede FLEET_SIZE)")
+        void test_addShip_sizeLimit_preventsAdd() throws Exception {
+            Class<?> iface = Class.forName("iscteiul.ista.battleship.IFleet");
+            Field fFleet = iface.getField("FLEET_SIZE");
+            Field fBoard = iface.getField("BOARD_SIZE");
+
+            Object fleetObj = fFleet.get(null);
+            Object boardObj = fBoard.get(null);
+
+            int fleetSize = (fleetObj instanceof Number) ? ((Number) fleetObj).intValue() : Integer.parseInt(fleetObj.toString());
+            int boardSize = (boardObj instanceof Number) ? ((Number) boardObj).intValue() : Integer.parseInt(boardObj.toString());
+
+            // Preenche EXACTAMENTE o limite com posições distintas (evita colisões acidentais)
+            for (int i = 0; i < fleetSize; i++) {
+                int row = (i / boardSize) % boardSize;
+                int col = i % boardSize;
+                fleet.getShips().add(new DummyShip("T" + i, Compass.SOUTH, new Position(row, col)));
+            }
+
+            // Tenta adicionar mais um navio — espera false porque já atingimos o limite
+            boolean res = fleet.addShip(new DummyShip("NEW", Compass.WEST, new Position((fleetSize / boardSize) % boardSize,
+                    (fleetSize % boardSize))));
+            assertFalse(res, "addShip deveria falhar quando fleet já atingiu IFleet.FLEET_SIZE");
+        }
+
+
+        @Test
+        @DisplayName("getShipsLike e getFloatingShips filtram corretamente; shipAt localiza navio ou null")
+        void test_getShipsLike_and_getFloating_and_shipAt_behaviour() {
+            DummyShip a1 = new DummyShip("A", Compass.NORTH, new Position(1,1));
+            DummyShip a2 = new DummyShip("A", Compass.NORTH, new Position(2,2));
+            DummyShip b = new DummyShip("B", Compass.SOUTH, new Position(3,3));
+            DummyShip f = new DummyShip("F", Compass.EAST, new Position(4,4));
+            f.setFloating(false);
+
+            fleet.getShips().add(a1);
+            fleet.getShips().add(a2);
+            fleet.getShips().add(b);
+            fleet.getShips().add(f);
+
+            List<IShip> likeA = fleet.getShipsLike("A");
+            assertEquals(2, likeA.size(), "getShipsLike deveria retornar apenas navios da categoria 'A'");
+
+            List<IShip> likeNull = fleet.getShipsLike(null);
+            assertTrue(likeNull.isEmpty(), "getShipsLike(null) deve retornar vazio quando não há categorias nulas");
+
+            List<IShip> floating = fleet.getFloatingShips();
+            assertFalse(floating.contains(f), "getFloatingShips não deve incluir navios afundados");
+            assertTrue(floating.contains(a1) && floating.contains(a2) && floating.contains(b), "getFloatingShips deve incluir apenas os que ainda flutuam");
+
+            IShip found = fleet.shipAt(new Position(2,2));
+            assertEquals(a2, found, "shipAt deve retornar o navio que ocupa a posição fornecida");
+
+            IShip none = fleet.shipAt(new Position(9,9));
+            assertNull(none, "shipAt deve retornar null quando não há navio na posição");
+        }
+
+        @Test
+        @DisplayName("addShip prevenido por colisão (ramo false quando colisionRisk true)")
+        void test_addShip_collisionRisk_preventsAdd() {
+            CollisionShip cs = new CollisionShip("C", Compass.EAST, new Position(5,5));
+            fleet.getShips().add(cs); // já existente que força colisão
+            DummyShip newShip = new DummyShip("NEW", Compass.NORTH, new Position(6,6));
+            boolean res = fleet.addShip(newShip);
+            assertFalse(res, "addShip deveria falhar quando colisão é detectada por ships existentes");
+        }
+    }
+
+    // java
+    @Test
+    @DisplayName("getShipsLike lança NPE quando existe navio com categoria nula")
+    void getShipsLike_nullShipCategory_throwsNPE() {
+        DummyShip nullCat = new DummyShip(null, Compass.NORTH, new Position(1,1));
+        fleet.getShips().add(nullCat);
+        assertThrows(NullPointerException.class, () -> fleet.getShipsLike("X"),
+                "Esperava NullPointerException quando um navio na frota tem categoria nula");
+    }
+
+    @Test
+    @DisplayName("addShip aceita navios no limite do tabuleiro (BOARD_SIZE-1) — condição limite")
+    void addShip_acceptsShips_onBoardEdges() {
+        DummyShip rightEdge = new DummyShip("EDGE_R", Compass.EAST, new Position(0, boardSize - 1));
+        DummyShip bottomEdge = new DummyShip("EDGE_B", Compass.SOUTH, new Position(boardSize - 1, 0));
+
+        assertTrue(fleet.addShip(rightEdge), "Esperava addShip aceitar navio com coluna = BOARD_SIZE-1");
+        assertTrue(fleet.addShip(bottomEdge), "Esperava addShip aceitar navio com linha = BOARD_SIZE-1");
+    }
+
+    // java
+    @Test
+    @DisplayName("printShipsByCategory imprime quando a categoria existe")
+    void printShipsByCategory_printsExistingCategory() {
+        DummyShip s1 = new DummyShip("CAT", Compass.NORTH, new Position(1, 1));
+        DummyShip s2 = new DummyShip("OTHER", Compass.SOUTH, new Position(2, 2));
+        fleet.getShips().add(s1);
+        fleet.getShips().add(s2);
+
+        fleet.printShipsByCategory("CAT");
+        String out = outContent.toString();
+        assertTrue(out.contains("CAT"), "Esperava saída contendo 'CAT' quando existem navios dessa categoria");
+    }
+
+    // java
+    @Test
+    @DisplayName("printShips aceita lista com elemento nulo sem lançar exceção")
+    void printShips_listContainingNull_doesNotThrow() {
+        List<IShip> l = new ArrayList<>();
+        l.add(null);
+
+        // garante que não lança exceção
+        assertDoesNotThrow(() -> Fleet.printShips(l),
+                "Esperava que Fleet.printShips aceitasse listas contendo elementos nulos sem lançar exceção");
+
+        // valida comportamento observável: ou não imprime nada ou imprime 'null'
+        String out = outContent.toString();
+        assertTrue(out.isEmpty() || out.contains("null"),
+                "Espera-se que a saída seja vazia ou contenha 'null' se null for impresso; saída: \"" + out + "\"");
+    }
+
+
+
 }
