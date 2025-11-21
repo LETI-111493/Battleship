@@ -16,7 +16,7 @@ public class Caravel extends Ship {
 
         if (bearing == null)
             throw new NullPointerException("ERROR! invalid bearing for the caravel");
-
+    
         switch (bearing) {
             case NORTH:
             case SOUTH:
