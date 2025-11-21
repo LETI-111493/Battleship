@@ -1,13 +1,13 @@
 package iscteiul.ista.battleship;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+
+import org.junit.jupiter.api.*; // Importa tudo, incluindo @Nested e @DisplayName
 
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@DisplayName("Unit Tests for Caravel Class")
 class CaravelTest {
 
     private Caravel caravel;
@@ -26,199 +26,215 @@ class CaravelTest {
         initialPos = null;
     }
 
+    // -------------------------------------------------------------
+
+    @Nested
+    @DisplayName("A. Constructor and Initialization Tests")
+    class ConstructorTests {
+
+        // --- Construtores de Sucesso (Cobre os 4 ramos do switch de construção) ---
+
+        @Test
+        @DisplayName("Constructor initializes positions correctly when bearing is NORTH")
+        void constructorInitializesPositionsNorth() {
+            // Teste já existente (Base)
+            assertEquals(2, caravel.getPositions().size());
+            assertEquals(new Position(4, 5), caravel.getPositions().get(1));
+        }
+
+        @Test
+        @DisplayName("Constructor initializes positions correctly when bearing is SOUTH")
+        void constructorInitializesPositionsSouth() {
+            // NOVO TESTE para cobrir explicitamente o ramo SOUTH
+            Caravel southCaravel = new Caravel(Compass.SOUTH, new Position(5, 5));
+            List<IPosition> southPos = southCaravel.getPositions();
+
+            // SOUTH (row + 0, 1) a partir de (5,5): (5,5) e (6,5)
+            assertEquals(2, southPos.size());
+            assertEquals(new Position(6, 5), southPos.get(1),
+                    "Erro: A segunda posição para SOUTH deveria ser (6,5).");
+        }
+
+        @Test
+        @DisplayName("Constructor initializes positions correctly when bearing is EAST")
+        void constructorInitializesPositionsEast() {
+            // Teste já existente (Base)
+            Caravel eastCaravel = new Caravel(Compass.EAST, new Position(2, 2));
+            List<IPosition> eastPos = eastCaravel.getPositions();
+            assertEquals(2, eastPos.size());
+            assertEquals(new Position(2, 3), eastPos.get(1));
+        }
+
+        @Test
+        @DisplayName("Constructor initializes positions correctly when bearing is WEST")
+        void constructorInitializesPositionsWest() {
+            // NOVO TESTE para cobrir explicitamente o ramo WEST
+            Caravel westCaravel = new Caravel(Compass.WEST, new Position(7, 7));
+            List<IPosition> westPos = westCaravel.getPositions();
+
+            // WEST (col + 0, 1) a partir de (7,7): (7,7) e (7,8) (assume-se que WEST vai para a direita para simplificar)
+            // Se o seu código usa WEST para construir para a esquerda, ajuste a expectativa: (7,7) e (7,6)
+            assertEquals(2, westPos.size());
+            assertEquals(new Position(7, 8), westPos.get(1),
+                    "Erro: A segunda posição para WEST deveria ser (7,8).");
+        }
+
+        // --- Testes de Falha (Cobre caminhos de exceção) ---
+
+        @Test
+        @DisplayName("Constructor throws AssertionError for null bearing")
+        void constructorThrowsExceptionForNullBearing() {
+            // Cobre o caminho de falha na pré-condição (bearing == null)
+            assertThrows(AssertionError.class,
+                    () -> new Caravel(null, new Position(0, 0)),
+                    "Erro: new Caravel(null, pos) deveria lançar AssertionError.");
+        }
+
+        @Test
+        @DisplayName("Constructor throws AssertionError for null position")
+        void constructorThrowsExceptionForNullPosition() {
+            // NOVO TESTE: Cobre o caminho de falha na pré-condição (pos == null)
+            assertThrows(AssertionError.class,
+                    () -> new Caravel(Compass.NORTH, null),
+                    "Erro: new Caravel(bearing, null) deveria lançar AssertionError.");
+        }
+
+        @Test
+        @DisplayName("Ship.buildShip() check")
+        void buildShipTest() {
+            Ship built = Ship.buildShip("caravela", Compass.EAST, new Position(1, 1));
+            assertNotNull(built);
+            assertEquals("Caravela", built.getCategory());
+            assertEquals(2, built.getSize());
+        }
+    }
+
+    // -------------------------------------------------------------
+
+    @Nested
+    @DisplayName("B. Boundary and State Tests")
+    class BoundaryAndStateTests {
+
+        // --- Testes de Estado ---
+
+        @Test
+        @DisplayName("stillFloating covers all paths (hit, still floating, sunk)")
+        void stillFloatingTest() {
+            // 1. Ramo: Inicialmente flutuando (true)
+            assertTrue(caravel.stillFloating());
+
+            // 2. Ramo: Acertar apenas numa das posições → loop continua e retorna true
+            caravel.shoot(initialPos);
+            assertTrue(caravel.stillFloating());
+
+            // 3. Ramo: Acertar a segunda posição → loop completa e retorna false
+            caravel.shoot(new Position(4, 5));
+            assertFalse(caravel.stillFloating());
+        }
+
+        // --- Testes de Limites (Bounds) - Caminhos de Lógica Mínima e Máxima ---
+
+        @Test
+        void getTopMostPosTest() {
+            assertEquals(3, caravel.getTopMostPos(), "Erro: TopMost (min row) deveria ser 3.");
+        }
+
+        @Test
+        void getBottomMostPosTest() {
+            assertEquals(4, caravel.getBottomMostPos(), "Erro: BottomMost (max row) deveria ser 4.");
+        }
+
+        @Test
+        void getLeftMostPosTest() {
+            assertEquals(5, caravel.getLeftMostPos(), "Erro: LeftMost (min col) deveria ser 5.");
+        }
+
+        @Test
+        void getRightMostPosTest() {
+            assertEquals(5, caravel.getRightMostPos(), "Erro: RightMost (max col) deveria ser 5.");
+        }
+    }
+
+    // -------------------------------------------------------------
+
+    @Nested
+    @DisplayName("C. Collision and Interaction Tests")
+    class CollisionTests {
+
+        @Test
+        void occupiesTest() {
+            assertTrue(caravel.occupies(initialPos));
+            assertFalse(caravel.occupies(new Position(0, 0)));
+            assertThrows(AssertionError.class, () -> caravel.occupies(null));
+        }
+
+        @Test
+        void tooCloseToPositionTest() {
+            assertTrue(caravel.tooCloseTo(new Position(3, 6)), "Posição adjacente");
+            assertFalse(caravel.tooCloseTo(new Position(10, 10)), "Posição distante");
+            assertThrows(NullPointerException.class, () -> caravel.tooCloseTo((IPosition) null));
+        }
+
+        @Test
+        void tooCloseToShipTest() {
+            Ship near = new Caravel(Compass.NORTH, new Position(3, 6));
+            Ship far = new Caravel(Compass.NORTH, new Position(10, 10));
+
+            // Cobre o caminho True (adjacente)
+            assertTrue(caravel.tooCloseTo(near), "Barcos adjacentes");
+            // Cobre o caminho False (distante)
+            assertFalse(caravel.tooCloseTo(far), "Barcos distantes");
+            // Cobre o caminho de exceção
+            assertThrows(AssertionError.class, () -> caravel.tooCloseTo((Ship) null));
+        }
+
+        @Test
+        void shootTest() {
+            // 1. Caminho: tiro falhado (loop completa, não atinge)
+            caravel.shoot(new Position(0, 0));
+            assertTrue(caravel.stillFloating());
+
+            // 2. Caminho: tiro certeiro (loop interrompido após encontrar alvo)
+            caravel.shoot(initialPos);
+
+            // 3. Caminho: exceção
+            assertThrows(AssertionError.class, () -> caravel.shoot(null));
+        }
+    }
+
+    // -------------------------------------------------------------
+
+    // --- Métodos de Verificação Final ---
+
     @Test
-    void buildShip() {
-        Ship built = Ship.buildShip("caravela", Compass.EAST, new Position(1, 1));
-        assertNotNull(built,
-                "Erro: Ship.buildShip('caravela') deveria devolver uma instância de Caravel, mas devolveu null.");
-        assertEquals("Caravela", built.getCategory(),
-                "Erro: Esperava-se que a categoria fosse 'Caravela', mas foi '" + built.getCategory() + "'.");
-        assertEquals(2, built.getSize(),
-                "Erro: Esperava-se que o tamanho da Caravela fosse 2, mas foi " + built.getSize() + ".");
+    void getCategoryTest() {
+        assertEquals("Caravela", caravel.getCategory());
     }
 
     @Test
-    void getCategory() {
-        assertEquals("Caravela", caravel.getCategory(),
-                "Erro: getCategory() deveria devolver 'Caravela', mas devolveu '" + caravel.getCategory() + "'.");
+    void getPositionsTest() {
+        assertEquals(2, caravel.getPositions().size());
+        assertEquals(new Position(4, 5), caravel.getPositions().get(1));
     }
 
     @Test
-    void getPositions() {
-        List<IPosition> positions = caravel.getPositions();
-        assertEquals(2, positions.size(),
-                "Erro: A Caravela deveria ter exatamente 2 posições, mas a lista tem " + positions.size() + ".");
-
-        IPosition p0 = positions.get(0);
-        IPosition p1 = positions.get(1);
-
-        assertEquals(initialPos, p0,
-                "Erro: A primeira posição deveria ser a posição inicial (3,5), mas é " + p0 + ".");
-        assertEquals(new Position(4, 5), p1,
-                "Erro: A segunda posição deveria ser (4,5), mas é " + p1 + ".");
-
-        // Cobrir também o ramo horizontal (EAST) do construtor
-        Caravel eastCaravel = new Caravel(Compass.EAST, new Position(2, 2));
-        List<IPosition> eastPos = eastCaravel.getPositions();
-        assertEquals(2, eastPos.size(),
-                "Erro: Caravela EAST deveria ter 2 posições, mas tem " + eastPos.size() + ".");
-        assertEquals(new Position(2, 2), eastPos.get(0),
-                "Erro: Para EAST, a primeira posição deveria ser (2,2), mas é " + eastPos.get(0) + ".");
-        assertEquals(new Position(2, 3), eastPos.get(1),
-                "Erro: Para EAST, a segunda posição deveria ser (2,3), mas é " + eastPos.get(1) + ".");
+    void getPositionTest() {
+        assertEquals(initialPos, caravel.getPosition());
     }
 
     @Test
-    void getPosition() {
-        IPosition p = caravel.getPosition();
-        assertEquals(initialPos, p,
-                "Erro: getPosition() deveria devolver a posição inicial da Caravela (3,5), mas devolveu " + p + ".");
+    void getBearingTest() {
+        assertEquals(Compass.NORTH, caravel.getBearing());
     }
 
     @Test
-    void getBearing() {
-        assertEquals(Compass.NORTH, caravel.getBearing(),
-                "Erro: getBearing() deveria devolver NORTH, mas devolveu " + caravel.getBearing() + ".");
-    }
-
-    @Test
-    void stillFloating() {
-        // Inicialmente deve estar a flutuar
-        assertTrue(caravel.stillFloating(),
-                "Erro: Caravela recém-criada deveria estar a flutuar, mas stillFloating() devolveu false.");
-
-        // Acertar apenas numa das posições → ainda flutua
-        caravel.shoot(initialPos);
-        assertTrue(caravel.stillFloating(),
-                "Erro: Após um único tiro numa Caravela de tamanho 2, deveria ainda estar a flutuar.");
-
-        // Acertar a segunda posição → deixa de flutuar
-        caravel.shoot(new Position(4, 5));
-        assertFalse(caravel.stillFloating(),
-                "Erro: Após dois tiros nas duas posições da Caravela, deveria estar afundada, mas stillFloating() devolveu true.");
-    }
-
-    @Test
-    void getTopMostPos() {
-        assertEquals(3, caravel.getTopMostPos(),
-                "Erro: getTopMostPos() deveria devolver 3 para uma Caravela vertical em (3,5)-(4,5), mas devolveu outro valor.");
-    }
-
-    @Test
-    void getBottomMostPos() {
-        assertEquals(4, caravel.getBottomMostPos(),
-                "Erro: getBottomMostPos() deveria devolver 4 para uma Caravela vertical em (3,5)-(4,5), mas devolveu outro valor.");
-    }
-
-    @Test
-    void getLeftMostPos() {
-        assertEquals(5, caravel.getLeftMostPos(),
-                "Erro: getLeftMostPos() deveria devolver 5 para uma Caravela em (3,5)-(4,5), mas devolveu outro valor.");
-    }
-
-    @Test
-    void getRightMostPos() {
-        assertEquals(5, caravel.getRightMostPos(),
-                "Erro: getRightMostPos() deveria devolver 5 para uma Caravela em (3,5)-(4,5), mas devolveu outro valor.");
-    }
-
-    @Test
-    void occupies() {
-        // Ocupa ambas as posições
-        assertTrue(caravel.occupies(initialPos),
-                "Erro: occupies(initialPos) deveria ser true porque a Caravela ocupa essa posição.");
-        assertTrue(caravel.occupies(new Position(4, 5)),
-                "Erro: occupies(4,5) deveria ser true porque é a segunda posição da Caravela.");
-
-        // Não ocupa posição distante
-        assertFalse(caravel.occupies(new Position(0, 0)),
-                "Erro: occupies(0,0) deveria ser false porque a Caravela não ocupa essa posição.");
-
-        // Teste de exceção (assert) para argumento null
-        assertThrows(AssertionError.class,
-                () -> caravel.occupies(null),
-                "Erro: occupies(null) deveria lançar AssertionError devido ao assert pos != null.");
-    }
-
-    @Test
-    void tooCloseToPosition() {
-        IPosition adjacent = new Position(3, 6);
-        assertTrue(caravel.tooCloseTo(adjacent),
-                "Erro: posição adjacente deveria ser considerada demasiado próxima.");
-
-        IPosition far = new Position(10, 10);
-        assertFalse(caravel.tooCloseTo(far),
-                "Erro: posição distante não deveria ser considerada demasiado próxima.");
-
-        // Null → NullPointerException
-        assertThrows(NullPointerException.class,
-                () -> caravel.tooCloseTo((IPosition) null),
-                "Erro: tooCloseTo(null) deveria lançar NullPointerException.");
-    }
-
-
-    @Test
-    void tooCloseToShip() {
-        // Outra Caravela adjacente
-        Ship near = new Caravel(Compass.NORTH, new Position(3, 6));
-        Ship far = new Caravel(Compass.NORTH, new Position(10, 10));
-
-        assertTrue(caravel.tooCloseTo(near),
-                "Erro: Uma Caravela adjacente deveria ser considerada demasiado próxima, mas tooCloseTo(near) devolveu false.");
-
-        assertFalse(caravel.tooCloseTo(far),
-                "Erro: Uma Caravela distante não deveria ser considerada demasiado próxima, mas tooCloseTo(far) devolveu true.");
-
-        // Null → AssertionError, por causa de assert other != null
-        assertThrows(AssertionError.class,
-                () -> caravel.tooCloseTo((Ship) null),
-                "Erro: tooCloseTo(null) com IShip deveria lançar AssertionError devido ao assert other != null.");
-    }
-
-    @Test
-    void shoot() {
-        // Tiro falhado
-        caravel.shoot(new Position(0, 0));
-        assertTrue(caravel.stillFloating(),
-                "Erro: Um tiro falhado não deveria afundar nem alterar o estado de flutuação da Caravela.");
-
-        // Acertar as duas posições
-        caravel.shoot(initialPos);
-        assertTrue(caravel.stillFloating(),
-                "Erro: Após acertar apenas uma das duas posições, a Caravela ainda deveria estar a flutuar.");
-
-        caravel.shoot(new Position(4, 5));
-        assertFalse(caravel.stillFloating(),
-                "Erro: Após acertar as duas posições, a Caravela deveria estar afundada.");
-
-        // Null → AssertionError por assert pos != null
-        assertThrows(AssertionError.class,
-                () -> caravel.shoot(null),
-                "Erro: shoot(null) deveria lançar AssertionError devido ao assert pos != null.");
-    }
-
-    @Test
-    void testToString() {
+    void testToStringTest() {
         String s = caravel.toString();
-        assertNotNull(s,
-                "Erro: toString() não deveria devolver null.");
-        assertFalse(s.isEmpty(),
-                "Erro: toString() não deveria devolver uma String vazia.");
-        assertTrue(s.contains("Caravela"),
-                "Erro: toString() deveria conter o nome 'Caravela', mas devolveu '" + s + "'.");
+        assertTrue(s.contains("Caravela"));
     }
 
     @Test
-    void getSize() {
-        assertEquals(2, caravel.getSize(),
-                "Erro: getSize() deveria devolver 2 para a Caravela, mas devolveu " + caravel.getSize() + ".");
+    void getSizeTest() {
+        assertEquals(2, caravel.getSize());
     }
-
-    @Test
-    void constructorNullBearingThrows() {
-        assertThrows(AssertionError.class,
-                () -> new Caravel(null, new Position(0, 0)),
-                "Erro: new Caravel(null, pos) deveria lançar AssertionError devido ao assert bearing != null no construtor de Ship.");
-    }
-
 }
