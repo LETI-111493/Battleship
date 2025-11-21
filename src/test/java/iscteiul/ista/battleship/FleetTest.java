@@ -69,9 +69,13 @@ class FleetTest {
         IShip s = new Galleon(Compass.EAST, new Position(4, 4));
         fleet.addShip(s);
 
-        List<IShip> list = fleet.getShipsLike("Galleon");
+        // usar exatamente a categoria que a classe Galleon devolve
+        List<IShip> list = fleet.getShipsLike(s.getCategory());
+
         assertEquals(1, list.size());
+        assertTrue(list.contains(s));
     }
+
 
     @Test
     @DisplayName("shipAt devolve o navio na posição correta")
