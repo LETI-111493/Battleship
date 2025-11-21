@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@DisplayName("Unit Tests for Frigate Class (Path/Branch Coverage)")
 class FrigateTest {
 
     @Nested

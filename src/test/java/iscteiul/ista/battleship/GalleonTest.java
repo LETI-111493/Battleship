@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@DisplayName("Unit Tests for Galleon Class (Path/Branch Coverage)")
 class GalleonTest {
 
     @Nested

@@ -16,6 +16,7 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class ShipTest {
 
+    // --- Subclasse de apoio ---
     static class TestShip extends Ship {
         public TestShip(String category, Compass bearing, IPosition pos) {
             super(category, bearing, pos);
@@ -34,6 +35,7 @@ class ShipTest {
 
     @BeforeEach
     void setUp() {
+        // Navio de teste com 2 posições: (2,3) e (2,4). Usado para testes de estado e loops.
         position = new Position(2, 3);
         bearing = Compass.NORTH;
         // The TestShip uses the base Ship constructor logic
