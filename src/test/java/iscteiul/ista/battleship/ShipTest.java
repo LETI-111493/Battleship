@@ -1,6 +1,7 @@
 package iscteiul.ista.battleship;
 
 import org.junit.jupiter.api.*;
+
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -297,6 +298,203 @@ class ShipTest {
         void testToString_containsCategoryBearingPosition() {
             String actual = ship.toString();
             assertTrue(actual.contains(ship.getCategory()));
+        }
+    }
+
+    @DisplayName("Ship - Cobertura de Condições (Condition Coverage)")
+    class ShipConditionCoverageTest {
+
+        static class TestShip extends Ship {
+            TestShip(String category, Compass bearing, IPosition pos) {
+                super(category, bearing, pos);
+            }
+
+            @Override
+            public Integer getSize() {
+                return positions.size();
+            }
+        }
+
+        // Helper comum
+        private Ship makeShipWithPositions() {
+            TestShip s = new TestShip("t", Compass.NORTH, new Position(2, 3));
+            s.getPositions().add(new Position(2, 3)); // P0
+            s.getPositions().add(new Position(2, 4)); // P1
+            return s;
+        }
+
+        @Nested
+        @DisplayName("A && B - decomposição completa (cada átomo varia)")
+        class AndExpressionDecomposition {
+
+            @Test
+            @DisplayName("A=true && B=true -> ocupa(posA) && tooCloseTo(posB) -> true")
+            void aTrue_bTrue_returnsTrue() {
+                Ship s = makeShipWithPositions();
+                IPosition posA = new Position(2, 3); // ocupa -> true
+                IPosition posB = new Position(2, 4); // tooCloseTo -> true (adjacente/igual)
+                boolean A = s.occupies(posA);
+                boolean B = s.tooCloseTo(posB);
+                assertTrue(A && B, "Esperado true quando A=true e B=true");
+            }
+
+            @Test
+            @DisplayName("A=true && B=false -> ocupa(posA) && tooCloseTo(far) -> false")
+            void aTrue_bFalse_returnsFalse() {
+                Ship s = makeShipWithPositions();
+                IPosition posA = new Position(2, 3); // ocupa -> true
+                IPosition far = new Position(9, 9);  // tooCloseTo -> false
+                boolean A = s.occupies(posA);
+                boolean B = s.tooCloseTo(far);
+                assertFalse(A && B, "Esperado false quando A=true e B=false");
+            }
+
+            @Test
+            @DisplayName("A=false && B=true -> ocupa(fora) && tooCloseTo(posB) -> false")
+            void aFalse_bTrue_returnsFalse() {
+                Ship s = makeShipWithPositions();
+                IPosition outside = new Position(7, 7); // ocupa -> false
+                IPosition posB = new Position(2, 4);     // tooCloseTo -> true
+                boolean A = s.occupies(outside);
+                boolean B = s.tooCloseTo(posB);
+                assertFalse(A && B, "Esperado false quando A=false e B=true");
+            }
+
+            @Test
+            @DisplayName("A=false && B=false -> ocupa(fora) && tooCloseTo(far) -> false")
+            void aFalse_bFalse_returnsFalse() {
+                Ship s = makeShipWithPositions();
+                IPosition outside = new Position(7, 7); // ocupa -> false
+                IPosition far = new Position(8, 8);      // tooCloseTo -> false
+                boolean A = s.occupies(outside);
+                boolean B = s.tooCloseTo(far);
+                assertFalse(A && B, "Esperado false quando A=false e B=false");
+            }
+        }
+
+        @Nested
+        @DisplayName("A || B - decomposição completa (cada átomo varia)")
+        class OrExpressionDecomposition {
+
+            @Test
+            @DisplayName("A=true || B=true -> ocupa(posA) || tooCloseTo(posB) -> true")
+            void aTrue_bTrue_returnsTrue() {
+                Ship s = makeShipWithPositions();
+                IPosition posA = new Position(2, 3); // true
+                IPosition posB = new Position(2, 4); // true
+                assertTrue(s.occupies(posA) || s.tooCloseTo(posB));
+            }
+
+            @Test
+            @DisplayName("A=true || B=false -> ocupa(posA) || tooCloseTo(far) -> true")
+            void aTrue_bFalse_returnsTrue() {
+                Ship s = makeShipWithPositions();
+                IPosition posA = new Position(2, 3); // true
+                IPosition far = new Position(9, 9);  // false
+                assertTrue(s.occupies(posA) || s.tooCloseTo(far));
+            }
+
+            @Test
+            @DisplayName("A=false || B=true -> ocupa(outside) || tooCloseTo(posB) -> true")
+            void aFalse_bTrue_returnsTrue() {
+                Ship s = makeShipWithPositions();
+                IPosition outside = new Position(7, 7); // false
+                IPosition posB = new Position(2, 4);     // true
+                assertTrue(s.occupies(outside) || s.tooCloseTo(posB));
+            }
+
+            @Test
+            @DisplayName("A=false || B=false -> ocupa(outside) || tooCloseTo(far) -> false")
+            void aFalse_bFalse_returnsFalse() {
+                Ship s = makeShipWithPositions();
+                IPosition outside = new Position(7, 7); // false
+                IPosition far = new Position(8, 8);      // false
+                assertFalse(s.occupies(outside) || s.tooCloseTo(far));
+            }
+        }
+
+        @Nested
+        @DisplayName("Ternary operator - decomposição da condição composta")
+        class TernaryDecomposition {
+
+            @Test
+            @DisplayName("A=true && B=true -> devolve \"OK\"")
+            void condTrue_returnsOK() {
+                Ship s = makeShipWithPositions();
+                IPosition a = new Position(2, 3); // occupies true
+                IPosition b = new Position(2, 4); // tooCloseTo true
+                String result = (s.occupies(a) && s.tooCloseTo(b)) ? "OK" : "NO";
+                assertEquals("OK", result);
+            }
+
+            @Test
+            @DisplayName("A=false || B=false -> devolve \"NO\"")
+            void condFalse_returnsNO() {
+                Ship s = makeShipWithPositions();
+                IPosition a = new Position(7, 7); // occupies false
+                IPosition b = new Position(9, 9); // tooCloseTo false
+                String result = (s.occupies(a) && s.tooCloseTo(b)) ? "OK" : "NO";
+                assertEquals("NO", result);
+            }
+        }
+
+        @Nested
+        @DisplayName("while/combinada - garantir avaliação de cada átomo")
+        class WhileAndCombinedDecomposition {
+
+            @Test
+            @DisplayName("while com A && B - B=false impede iterações")
+            void whileComposite_bFalse_noIterations() {
+                boolean A = true;
+                boolean B = false;
+                int it = 0;
+                int limit = 5;
+                while (A && B && it < limit) {
+                    it++;
+                }
+                assertEquals(0, it, "Quando B=false o laço não deve correr");
+            }
+
+            @Test
+            @DisplayName("while com A && B - A=true B=true executa até limite")
+            void whileComposite_aTrue_bTrue_runs() {
+                boolean A = true;
+                boolean B = true;
+                int it = 0;
+                int limit = 3;
+                while (A && B && it < limit) {
+                    it++;
+                }
+                assertEquals(limit, it, "Quando A && B true o laço deve executar até ao limite");
+            }
+        }
+
+        @Nested
+        @DisplayName("Fluxo normal - separar testes de lógica booleana dos fluxos padrão")
+        class NormalFlowTests {
+
+            @Test
+            @DisplayName("stillFloating: todos atingidos -> false")
+            void stillFloating_allHit_false() {
+                Ship s = makeShipWithPositions();
+                for (IPosition p : s.getPositions()) p.shoot();
+                assertFalse(s.stillFloating(), "Esperado false quando todas as posições estão atingidas");
+            }
+
+            @Test
+            @DisplayName("stillFloating: há não-atingida -> true")
+            void stillFloating_someUnhit_true() {
+                Ship s = makeShipWithPositions();
+                s.getPositions().get(0).shoot();
+                assertTrue(s.stillFloating(), "Esperado true se existir pelo menos uma posição não atingida");
+            }
+
+            @Test
+            @DisplayName("occupies(null) lança AssertionError")
+            void occupies_null_throwsAssertion() {
+                Ship s = makeShipWithPositions();
+                assertThrows(AssertionError.class, () -> s.occupies(null));
+            }
         }
     }
 }

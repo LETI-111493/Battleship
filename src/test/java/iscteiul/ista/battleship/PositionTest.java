@@ -1,10 +1,6 @@
 package iscteiul.ista.battleship;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -203,6 +199,223 @@ class PositionTest {
             p1.shoot(); p2.shoot();
 
             assertTrue(p1.equals(p2), "Esperava true quando row, column e estados são todos iguais");
+        }
+    }
+
+    @Test
+    void isAdjacentTo() {
+        // Mesmo local -> adjacente
+        assertTrue(pos.isAdjacentTo(new Position(2, 3)), "Esperava isAdjacentTo(true) para mesma posição mas retornou false");
+
+        // Vizinhos vertical/horizontal/diagonal devem ser adjacentes
+        assertTrue(pos.isAdjacentTo(new Position(1, 3)), "Esperava isAdjacentTo(true) para posição (1,3) mas retornou false");
+        assertTrue(pos.isAdjacentTo(new Position(3, 3)), "Esperava isAdjacentTo(true) para posição (3,3) mas retornou false");
+        assertTrue(pos.isAdjacentTo(new Position(2, 4)), "Esperava isAdjacentTo(true) para posição (2,4) mas retornou false");
+        assertTrue(pos.isAdjacentTo(new Position(3, 4)), "Esperava isAdjacentTo(true) para posição diagonal (3,4) mas retornou false");
+
+        // Posição com distância > 1 não é adjacente
+        assertFalse(pos.isAdjacentTo(new Position(4, 3)), "Esperava isAdjacentTo(false) para posição (4,3) mas retornou true");
+        assertFalse(pos.isAdjacentTo(new Position(0, 0)), "Esperava isAdjacentTo(false) para posição (0,0) mas retornou true");
+
+        // Passar null deve lançar NullPointerException (outro ramo)
+        assertThrows(NullPointerException.class, () -> pos.isAdjacentTo(null),
+                "Esperava NullPointerException ao chamar isAdjacentTo(null) mas nenhuma exceção foi lançada");
+    }
+
+    @Test
+    void occupy() {
+        // Inicialmente não ocupado
+        assertFalse(pos.isOccupied(), "Esperava isOccupied() == false imediatamente após criação mas retornou true");
+
+        // Depois de occupy() -> isOccupied true
+        pos.occupy();
+        assertTrue(pos.isOccupied(), "Esperava isOccupied() == true após occupy() mas retornou false");
+    }
+
+    @Test
+    void shoot() {
+        // Inicialmente não atingido
+        assertFalse(pos.isHit(), "Esperava isHit() == false imediatamente após criação mas retornou true");
+
+        // Depois de shoot() -> isHit true
+        pos.shoot();
+        assertTrue(pos.isHit(), "Esperava isHit() == true após shoot() mas retornou false");
+    }
+
+    @Test
+    void isOccupied() {
+        // Verifica ramo padrão false -> true
+        assertFalse(pos.isOccupied(), "Esperava isOccupied() inicialmente false mas retornou true");
+        pos.occupy();
+        assertTrue(pos.isOccupied(), "Esperava isOccupied() true após occupy() mas retornou false");
+    }
+
+    @Test
+    void isHit() {
+        // Verifica ramo padrão false -> true
+        assertFalse(pos.isHit(), "Esperava isHit() inicialmente false mas retornou true");
+        pos.shoot();
+        assertTrue(pos.isHit(), "Esperava isHit() true após shoot() mas retornou false");
+    }
+
+    @Test
+    void testToString() {
+        // Deve corresponder exatamente ao formato implementado em Position.toString()
+        String expected = "Linha = 2 Coluna = 3";
+        assertEquals(expected, pos.toString(), "Esperava toString() com valor '" + expected + "' mas foi '" + pos.toString() + "'");
+    }
+
+    private final Position base = new Position(2, 3);
+
+    @Nested
+    @DisplayName("isAdjacentTo(A && B) - decomposição completa dos átomos")
+    class IsAdjacentToConditions {
+
+        @Test
+        @DisplayName("A=true && B=true -> dr<=1 && dc<=1 -> retorna true")
+        void aTrue_bTrue_returnsTrue() {
+            // dr = 0, dc = 1 -> A true, B true
+            Position other = new Position(2, 4);
+            assertTrue(base.isAdjacentTo(other), "Esperado true quando dr<=1 e dc<=1");
+        }
+
+        @Test
+        @DisplayName("A=true && B=false -> dr<=1 && dc>1 -> retorna false")
+        void aTrue_bFalse_returnsFalse() {
+            // dr = 1, dc = 2 -> A true, B false
+            Position other = new Position(3, 5);
+            assertFalse(base.isAdjacentTo(other), "Esperado false quando dr<=1 mas dc>1");
+        }
+
+        @Test
+        @DisplayName("A=false && B=true -> dr>1 && dc<=1 -> retorna false")
+        void aFalse_bTrue_returnsFalse() {
+            // dr = 2, dc = 0 -> A false, B true
+            Position other = new Position(0, 3);
+            assertFalse(base.isAdjacentTo(other), "Esperado false quando dr>1 mas dc<=1");
+        }
+
+        @Test
+        @DisplayName("A=false && B=false -> dr>1 && dc>1 -> retorna false")
+        void aFalse_bFalse_returnsFalse() {
+            // dr = 2, dc = 3 -> A false, B false
+            Position other = new Position(0, 0);
+            assertFalse(base.isAdjacentTo(other), "Esperado false quando dr>1 e dc>1");
+        }
+
+        @Test
+        @DisplayName("chamada com null -> lança NullPointerException")
+        void null_throwsNPE() {
+            assertThrows(NullPointerException.class, () -> base.isAdjacentTo(null),
+                    "Esperado NullPointerException ao chamar isAdjacentTo(null)");
+        }
+    }
+
+    @Nested
+    @DisplayName("equals - decomposição do (row==other.row) && (col==other.col)")
+    class EqualsConditions {
+
+        @Test
+        @DisplayName("A=true && B=true -> mesmas coordenadas -> equals true")
+        void aTrue_bTrue_equalsTrue() {
+            IPosition other = new IPosition() {
+                public int getRow() { return 2; }
+                public int getColumn() { return 3; }
+                public boolean isAdjacentTo(IPosition other) { return false; }
+                public void occupy() {}
+                public void shoot() {}
+                public boolean isOccupied() { return false; }
+                public boolean isHit() { return false; }
+            };
+            assertTrue(base.equals(other), "Esperado equals(true) quando row e column coincidem");
+        }
+
+        @Test
+        @DisplayName("A=true && B=false -> mesma row, column diferente -> equals false")
+        void aTrue_bFalse_equalsFalse() {
+            IPosition other = new IPosition() {
+                public int getRow() { return 2; }
+                public int getColumn() { return 99; }
+                public boolean isAdjacentTo(IPosition other) { return false; }
+                public void occupy() {}
+                public void shoot() {}
+                public boolean isOccupied() { return false; }
+                public boolean isHit() { return false; }
+            };
+            assertFalse(base.equals(other), "Esperado equals(false) quando row igual mas column diferente");
+        }
+
+        @Test
+        @DisplayName("A=false && B=true -> row diferente, mesma column -> equals false")
+        void aFalse_bTrue_equalsFalse() {
+            IPosition other = new IPosition() {
+                public int getRow() { return 99; }
+                public int getColumn() { return 3; }
+                public boolean isAdjacentTo(IPosition other) { return false; }
+                public void occupy() {}
+                public void shoot() {}
+                public boolean isOccupied() { return false; }
+                public boolean isHit() { return false; }
+            };
+            assertFalse(base.equals(other), "Esperado equals(false) quando row diferente mas column igual");
+        }
+
+        @Test
+        @DisplayName("A=false && B=false -> row e column diferentes -> equals false")
+        void aFalse_bFalse_equalsFalse() {
+            IPosition other = new IPosition() {
+                public int getRow() { return 99; }
+                public int getColumn() { return 98; }
+                public boolean isAdjacentTo(IPosition other) { return false; }
+                public void occupy() {}
+                public void shoot() {}
+                public boolean isOccupied() { return false; }
+                public boolean isHit() { return false; }
+            };
+            assertFalse(base.equals(other), "Esperado equals(false) quando row e column diferentes");
+        }
+
+        @Test
+        @DisplayName("com objeto não-IPosition -> equals false")
+        void nonIPosition_returnsFalse() {
+            Object o = new Object();
+            assertFalse(base.equals(o), "Esperado equals(false) quando comparado com tipo diferente");
+        }
+
+        @Test
+        @DisplayName("comparar com null -> equals false")
+        void null_returnsFalse() {
+            assertFalse(base.equals(null), "Esperado equals(false) ao comparar com null");
+        }
+    }
+
+    @Nested
+    @DisplayName("Fluxo normal - testes simples separados da lógica booleana")
+    class NormalFlowTests {
+
+        @Test
+        @DisplayName("occupy() e isOccupied() alteram o estado")
+        void occupy_and_isOccupied_stateChange() {
+            Position p = new Position(5, 5);
+            assertFalse(p.isOccupied());
+            p.occupy();
+            assertTrue(p.isOccupied());
+        }
+
+        @Test
+        @DisplayName("shoot() e isHit() alteram o estado")
+        void shoot_and_isHit_stateChange() {
+            Position p = new Position(6, 6);
+            assertFalse(p.isHit());
+            p.shoot();
+            assertTrue(p.isHit());
+        }
+
+        @Test
+        @DisplayName("toString contém row e column")
+        void toString_containsCoordinates() {
+            String s = base.toString();
+            assertTrue(s.contains("Linha") && s.contains("Coluna"));
         }
     }
 }
