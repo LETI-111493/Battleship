@@ -1,8 +1,6 @@
 package iscteiul.ista.battleship;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 
 import java.util.List;
 
@@ -219,6 +217,155 @@ class CaravelTest {
         assertThrows(AssertionError.class,
                 () -> new Caravel(null, new Position(0, 0)),
                 "Erro: new Caravel(null, pos) deveria lançar AssertionError devido ao assert bearing != null no construtor de Ship.");
+    }
+
+    @Nested
+    @DisplayName("tooCloseTo(IPosition) - decomposição de A (linha) e B (coluna)")
+    class TooCloseToPositionConditions {
+
+        @Test
+        @DisplayName("A=true && B=true -> retorna true (adjacente)")
+        void aTrue_bTrue_returnsTrue() {
+            Caravel c = new Caravel(Compass.NORTH, new Position(3, 5));
+            // mesma linha e coluna +1 -> A true (0<=1), B true (1<=1)
+            assertTrue(c.tooCloseTo(new Position(3, 6)));
+        }
+
+        @Test
+        @DisplayName("A=true && B=false -> retorna false (linha próxima, coluna distante)")
+        void aTrue_bFalse_returnsFalse() {
+            Caravel c = new Caravel(Compass.NORTH, new Position(3, 5));
+            // linha difere em 1 (A true), coluna difere em 3 (B false)
+            assertFalse(c.tooCloseTo(new Position(4, 8)));
+        }
+
+        @Test
+        @DisplayName("A=false && B=true -> retorna false (linha distante, coluna próxima)")
+        void aFalse_bTrue_returnsFalse() {
+            Caravel c = new Caravel(Compass.NORTH, new Position(3, 5));
+            // linha difere em 4 (A false), coluna difere em 1 (B true)
+            assertFalse(c.tooCloseTo(new Position(7, 6)));
+        }
+
+        @Test
+        @DisplayName("A=false && B=false -> retorna false (distante em ambos)")
+        void aFalse_bFalse_returnsFalse() {
+            Caravel c = new Caravel(Compass.NORTH, new Position(3, 5));
+            assertFalse(c.tooCloseTo(new Position(10, 10)));
+        }
+
+        @Test
+        @DisplayName("pos null -> lança NullPointerException")
+        void positionNull_throwsNPE() {
+            Caravel c = new Caravel(Compass.NORTH, new Position(3, 5));
+            assertThrows(NullPointerException.class, () -> c.tooCloseTo((IPosition) null));
+        }
+    }
+
+    @Nested
+    @DisplayName("tooCloseTo(Ship) - decomposição de 'other != null' e proximidade de posições")
+    class TooCloseToShipConditions {
+
+        @Test
+        @DisplayName("other == null -> lança AssertionError (condição atómica false)")
+        void otherNull_throwsAssertionError() {
+            Caravel c = new Caravel(Compass.NORTH, new Position(3, 5));
+            assertThrows(AssertionError.class, () -> c.tooCloseTo((Ship) null));
+        }
+
+        @Test
+        @DisplayName("other != null && existe posição adjacente -> true")
+        void otherNotNull_and_adjacentPosition_returnsTrue() {
+            Caravel c = new Caravel(Compass.NORTH, new Position(3, 5));
+            Ship other = new Caravel(Compass.NORTH, new Position(3, 6)); // adjacente
+            assertTrue(c.tooCloseTo(other));
+        }
+
+        @Test
+        @DisplayName("other != null && nenhuma posição adjacente -> false")
+        void otherNotNull_and_noAdjacentPosition_returnsFalse() {
+            Caravel c = new Caravel(Compass.NORTH, new Position(3, 5));
+            Ship other = new Caravel(Compass.NORTH, new Position(10, 10)); // distante
+            assertFalse(c.tooCloseTo(other));
+        }
+
+        @Test
+        @DisplayName("other com múltiplas posições: uma adjacente basta -> true")
+        void otherHasMultiplePositions_oneAdjacent_returnsTrue() {
+            Caravel c = new Caravel(Compass.NORTH, new Position(3, 5));
+            // cria navio com uma posição adjacente e outra distante
+            Ship other = new Caravel(Compass.EAST, new Position(2, 6)); // positions: (2,6) e (2,7)
+            assertTrue(c.tooCloseTo(other));
+        }
+    }
+
+    @Nested
+    @DisplayName("occupies(...) e shoot(...) - decomposição de pos != null e contains/ocupação")
+    class OccupiesAndShootConditions {
+
+        @Test
+        @DisplayName("occupies: pos == null -> lança AssertionError")
+        void occupies_posNull_throwsAssertionError() {
+            Caravel c = new Caravel(Compass.NORTH, new Position(3, 5));
+            assertThrows(AssertionError.class, () -> c.occupies(null));
+        }
+
+        @Test
+        @DisplayName("occupies: pos presente -> true; pos ausente -> false")
+        void occupies_presentAndAbsent() {
+            Caravel c = new Caravel(Compass.NORTH, new Position(3, 5));
+            assertTrue(c.occupies(new Position(3, 5)));
+            assertFalse(c.occupies(new Position(0, 0)));
+        }
+
+        @Test
+        @DisplayName("shoot: pos == null -> lança AssertionError (condição atómica false)")
+        void shoot_posNull_throwsAssertionError() {
+            Caravel c = new Caravel(Compass.NORTH, new Position(3, 5));
+            assertThrows(AssertionError.class, () -> c.shoot(null));
+        }
+
+        @Test
+        @DisplayName("shoot: pos não ocupada -> miss mantém stillFloating")
+        void shoot_miss_keepsFloating() {
+            Caravel c = new Caravel(Compass.NORTH, new Position(3, 5));
+            boolean before = c.stillFloating();
+            c.shoot(new Position(0, 0)); // miss
+            assertEquals(before, c.stillFloating());
+        }
+
+        @Test
+        @DisplayName("shoot: pos ocupada -> acerto; variando hits para verificar stillFloating")
+        void shoot_hit_changesFloatingWhenAllHit() {
+            Caravel c = new Caravel(Compass.NORTH, new Position(3, 5));
+            // acerta primeira posição -> ainda flutua
+            c.shoot(new Position(3, 5));
+            assertTrue(c.stillFloating());
+            // acerta segunda posição -> deixa de flutuar
+            c.shoot(new Position(4, 5));
+            assertFalse(c.stillFloating());
+        }
+    }
+
+
+    @Test
+    @DisplayName("Construtor SOUTH -> cria posições verticais (row, column) e tamanho 2")
+    void constructorSouthCreatesVerticalPositions() {
+        Caravel c = new Caravel(Compass.SOUTH, new Position(5, 7));
+        List<IPosition> pos = c.getPositions();
+        assertEquals(2, pos.size(), "Caravela SOUTH deve ter 2 posições");
+        assertEquals(new Position(5, 7), pos.get(0), "primeira posição incorreta para SOUTH");
+        assertEquals(new Position(6, 7), pos.get(1), "segunda posição incorreta para SOUTH");
+    }
+
+    @Test
+    @DisplayName("Construtor WEST -> cria posições horizontais (row, column) e tamanho 2")
+    void constructorWestCreatesHorizontalPositions() {
+        Caravel c = new Caravel(Compass.WEST, new Position(8, 2));
+        List<IPosition> pos = c.getPositions();
+        assertEquals(2, pos.size(), "Caravela WEST deve ter 2 posições");
+        assertEquals(new Position(8, 2), pos.get(0), "primeira posição incorreta para WEST");
+        assertEquals(new Position(8, 3), pos.get(1), "segunda posição incorreta para WEST");
     }
 
 }

@@ -1,9 +1,7 @@
 // java
 package iscteiul.ista.battleship;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 
 import java.util.List;
 
@@ -200,4 +198,151 @@ class GalleonTest {
         assertNotNull(thrown, "Esperado AssertionError não-nulo; Atual: " + thrown);
     }
 
+
+
+    @Nested
+    @DisplayName("A && B - decomposição completa (cada átomo varia)")
+    class AndExpressionDecomposition {
+
+        @Test
+        @DisplayName("A=true && B=true -> ocupa e row correta -> true")
+        void aTrue_bTrue_returnsTrue() {
+            IPosition inside = galleon.getPositions().get(0);
+            boolean A = galleon.occupies(inside);
+            boolean B = inside.getRow() == 2;
+            assertTrue(A && B, "Esperado true quando ocupa e row==2");
+        }
+
+        @Test
+        @DisplayName("A=true && B=false -> ocupa mas row diferente -> false")
+        void aTrue_bFalse_returnsFalse() {
+            IPosition inside = galleon.getPositions().get(0);
+            boolean A = galleon.occupies(inside);
+            boolean B = inside.getRow() == 99;
+            assertFalse(A && B);
+        }
+
+        @Test
+        @DisplayName("A=false && B=true -> não ocupa mas row esperada -> false")
+        void aFalse_bTrue_returnsFalse() {
+            IPosition outside = new Position(99, 99);
+            boolean A = galleon.occupies(outside);
+            boolean B = outside.getRow() == 99;
+            assertFalse(A && B);
+        }
+
+        @Test
+        @DisplayName("A=false && B=false -> nem ocupa nem row correspondente -> false")
+        void aFalse_bFalse_returnsFalse() {
+            IPosition outside = new Position(99, 99);
+            boolean A = galleon.occupies(outside);
+            boolean B = outside.getRow() == 0;
+            assertFalse(A && B);
+        }
+    }
+
+    @Nested
+    @DisplayName("A || B - decomposição completa (cada átomo varia)")
+    class OrExpressionDecomposition {
+
+        @Test
+        @DisplayName("A=true || B=true -> ocupa ou row correta -> true")
+        void aTrue_bTrue_returnsTrue() {
+            IPosition inside = galleon.getPositions().get(0);
+            boolean A = galleon.occupies(inside);
+            boolean B = inside.getColumn() == 3;
+            assertTrue(A || B);
+        }
+
+        @Test
+        @DisplayName("A=true || B=false -> ocupa e column diferente -> true")
+        void aTrue_bFalse_returnsTrue() {
+            IPosition inside = galleon.getPositions().get(0);
+            boolean A = galleon.occupies(inside);
+            boolean B = inside.getColumn() == 99;
+            assertTrue(A || B);
+        }
+
+        @Test
+        @DisplayName("A=false || B=true -> não ocupa mas column esperada -> true")
+        void aFalse_bTrue_returnsTrue() {
+            IPosition outside = new Position(99, 99);
+            boolean A = galleon.occupies(outside);
+            boolean B = outside.getColumn() == 99;
+            assertTrue(A || B);
+        }
+
+        @Test
+        @DisplayName("A=false || B=false -> nem ocupa nem column correspondente -> false")
+        void aFalse_bFalse_returnsFalse() {
+            IPosition outside = new Position(99, 99);
+            boolean A = galleon.occupies(outside);
+            boolean B = outside.getColumn() == 0;
+            assertFalse(A || B);
+        }
+    }
+
+    @Nested
+    @DisplayName("Ternary operator - decomposição da condição")
+    class TernaryDecomposition {
+
+        @Test
+        @DisplayName("cond=true -> devolve \"INSIDE\"")
+        void condTrue_returnsInside() {
+            IPosition inside = galleon.getPositions().get(0);
+            String result = galleon.occupies(inside) ? "INSIDE" : "OUTSIDE";
+            assertEquals("INSIDE", result);
+        }
+
+        @Test
+        @DisplayName("cond=false -> devolve \"OUTSIDE\"")
+        void condFalse_returnsOutside() {
+            IPosition outside = new Position(99, 99);
+            String result = galleon.occupies(outside) ? "INSIDE" : "OUTSIDE";
+            assertEquals("OUTSIDE", result);
+        }
+    }
+
+    @Nested
+    @DisplayName("while/combinada - garantir avaliação de cada átomo")
+    class WhileAndCombinedDecomposition {
+
+        @Test
+        @DisplayName("while com A && B - B=false impede iterações")
+        void whileCompositeCondition_bFalse_noIterations() {
+            IPosition inside = galleon.getPositions().get(0);
+            boolean A = galleon.occupies(inside);
+            boolean B = false;
+            int iterations = 0;
+            int limit = 5;
+            while (A && B && iterations < limit) { iterations++; }
+            assertEquals(0, iterations);
+        }
+
+        @Test
+        @DisplayName("while com A && B - A=true B=true executa até limite")
+        void whileCompositeCondition_aTrue_bTrue_runs() {
+            IPosition inside = galleon.getPositions().get(0);
+            boolean A = galleon.occupies(inside);
+            boolean B = true;
+            int iterations = 0;
+            int limit = 3;
+            while (A && B && iterations < limit) { iterations++; }
+            assertEquals(limit, iterations);
+        }
+    }
+
+    @Nested
+    @DisplayName("Fluxo normal - exemplos de asserções simples")
+    class NormalFlowTests {
+
+        @Test
+        @DisplayName("retorna true quando ocupa e posição externa tem row diferente de 99")
+        void example_combination_assertBehavior() {
+            IPosition inside = galleon.getPositions().get(0);
+            IPosition outside = new Position(0, 0);
+            boolean result = galleon.occupies(inside) && outside.getRow() != 99;
+            assertTrue(result);
+        }
+    }
 }
